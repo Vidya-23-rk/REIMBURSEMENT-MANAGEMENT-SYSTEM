@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ──────────────────────────────────────────────
+
+enum Role {
+  admin
+  manager
+  employee
+}
+
+enum ExpenseStatus {
+  pending
+  in_progress
+  approved
+  rejected
+}
+
+enum RuleType {
+  none
+  percentage
+  specific
+  hybrid
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  rejected
+}
+
+// ─── MODELS ─────────────────────────────────────────────
+
+model Company {
+  id        String   @id @default(uuid())
+  name      String
+  country   String
+  currency  String   // Company default currency code, e.g. INR, USD
+  createdAt DateTime @default(now())
+
+  users          User[]
+  expenses       Expense[]
+  approvalRules  ApprovalRule[]
+}
+
+model User {
+  id                String   @id @default(uuid())
+  companyId         String
+  managerId         String?
+  name              String
+  email             String   @unique
+  passwordHash      String
+  role              Role     @default(employee)
+  isManagerApprover Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  company  Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  manager  User?   @relation("ManagerRelation", fields: [managerId], references: [id], onDelete: SetNull)
+  reports  User[]  @relation("ManagerRelation")
+
+  submittedExpenses  Expense[]
+  approvalSteps      ApprovalStep[]
+  approvalRequests   ApprovalRequest[]
+
+  @@index([companyId])
+}
+
+model Expense {
+  id           String        @id @default(uuid())
+  submittedBy  String
+  companyId    String
+  amount       Decimal
+  currency     String        // Currency code of submission, e.g. USD, EUR
+  amountInBase Decimal       // Converted amount in company default currency
+  category     String
+  description  String
+  expenseDate  DateTime
+  receiptUrl   String?
+  status       ExpenseStatus @default(pending)
+  createdAt    DateTime      @default(now())
+
+  submitter         User              @relation(fields: [submittedBy], references: [id], onDelete: Cascade)
+  company           Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  approvalRequests  ApprovalRequest[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([submittedBy])
+}
+
+model ApprovalRule {
+  id                  String   @id @default(uuid())
+  companyId           String
+  name                String
+  minAmount           Decimal?
+  maxAmount           Decimal?
+  ruleType            RuleType @default(none)
+  percentageThreshold Int?
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+
+  company           Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  approvalSteps     ApprovalStep[]
+  approvalRequests  ApprovalRequest[]
+
+  @@index([companyId])
+}
+
+model ApprovalStep {
+  id             String  @id @default(uuid())
+  ruleId         String
+  approverId     String
+  stepOrder      Int
+  isKeyApprover  Boolean @default(false)
+
+  rule      ApprovalRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  approver  User         @relation(fields: [approverId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+}
+
+model ApprovalRequest {
+  id         String         @id @default(uuid())
+  expenseId  String
+  approverId String
+  ruleId     String
+  stepOrder  Int
+  status     ApprovalStatus @default(pending)
+  comment    String?
+  decidedAt  DateTime?
+  createdAt  DateTime       @default(now())
+
+  expense   Expense      @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  approver  User         @relation(fields: [approverId], references: [id], onDelete: Cascade)
+  rule      ApprovalRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([expenseId])
+  @@index([approverId])
+}
