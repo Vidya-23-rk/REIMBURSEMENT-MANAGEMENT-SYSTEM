@@ -97,18 +97,28 @@ export default function ApprovalRules() {
       toast.error('Rule name is required');
       return;
     }
+
+    const payload = {
+      ...form,
+      steps: form.steps.map(s => ({
+        approverId: (s as any).approverId || undefined,
+        approverType: (s as any).approverType === 'specific_user' ? 'specific' : 'manager',
+        stepOrder: (s as any).order,
+      }))
+    };
+
     try {
       if (editingRule) {
-        await rulesApi.update(editingRule.id, form);
+        await rulesApi.update(editingRule.id, payload as any);
         toast.success('Rule updated');
       } else {
-        await rulesApi.create(form);
+        await rulesApi.create(payload as any);
         toast.success('Rule created');
       }
       setShowModal(false);
       loadData();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to save rule');
+      toast.error(err.response?.data?.error || err.message || 'Failed to save rule');
     }
   };
 

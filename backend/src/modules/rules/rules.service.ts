@@ -21,7 +21,7 @@ export class RulesService {
     maxAmount?: number;
     ruleType: 'none' | 'percentage' | 'specific' | 'hybrid';
     percentageThreshold?: number;
-    steps: { approverId: string; stepOrder: number; isKeyApprover?: boolean }[];
+    steps: { approverId?: string | null; approverType?: string; stepOrder: number; isKeyApprover?: boolean }[];
   }) {
     const rule = await prisma.approvalRule.create({
       data: {
@@ -33,7 +33,8 @@ export class RulesService {
         percentageThreshold: body.percentageThreshold || null,
         approvalSteps: {
           create: body.steps.map(step => ({
-            approverId: step.approverId,
+            approverId: step.approverId || null,
+            approverType: step.approverType || 'specific',
             stepOrder: step.stepOrder,
             isKeyApprover: step.isKeyApprover || false,
           })),
@@ -57,7 +58,7 @@ export class RulesService {
     ruleType?: 'none' | 'percentage' | 'specific' | 'hybrid';
     percentageThreshold?: number | null;
     active?: boolean;
-    steps?: { approverId: string; stepOrder: number; isKeyApprover?: boolean }[];
+    steps?: { approverId?: string | null; approverType?: string; stepOrder: number; isKeyApprover?: boolean }[];
   }) {
     const existing = await prisma.approvalRule.findFirst({
       where: { id: ruleId, companyId },
@@ -71,7 +72,8 @@ export class RulesService {
         await tx.approvalStep.createMany({
           data: body.steps!.map(step => ({
             ruleId,
-            approverId: step.approverId,
+            approverId: step.approverId || null,
+            approverType: step.approverType || 'specific',
             stepOrder: step.stepOrder,
             isKeyApprover: step.isKeyApprover || false,
           })),

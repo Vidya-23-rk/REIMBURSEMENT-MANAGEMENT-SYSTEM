@@ -53,7 +53,8 @@ export const createRuleSchema = z.object({
   ruleType: z.enum(['none', 'percentage', 'specific', 'hybrid']),
   percentageThreshold: z.number().min(1).max(100).optional().nullable(),
   steps: z.array(z.object({
-    approverId: z.string().uuid(),
+    approverId: z.string().uuid().optional().nullable(),
+    approverType: z.enum(['specific', 'manager']).optional().default('specific'),
     stepOrder: z.number().int().min(1),
     isKeyApprover: z.boolean().optional(),
   })).min(1, 'At least one approval step is required'),
