@@ -6,20 +6,15 @@ import { successResponse, errorResponse } from '../../utils/response';
 export class ExpensesController {
   async createExpense(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const { amount, currency, category, description, expenseDate } = req.body;
-
-      if (!amount || !currency || !category || !description || !expenseDate) {
-        errorResponse(res, 'Amount, currency, category, description, and expenseDate are required.', 400);
-        return;
-      }
-
-      // Build receiptUrl from uploaded file (if any)
-      const receiptUrl = req.file ? `/uploads/${req.file.filename}` : (req.body.receiptUrl || undefined);
+      // receiptUrl from uploaded file or body
+      const receiptUrl = req.file
+        ? `/uploads/${req.file.filename}`
+        : (req.body.receiptUrl || undefined);
 
       const expense = await expensesService.createExpense(
         req.user!.userId,
         req.user!.companyId,
-        { amount: parseFloat(amount), currency, category, description, expenseDate, receiptUrl }
+        { ...req.body, amount: parseFloat(req.body.amount), receiptUrl }
       );
       successResponse(res, expense, 201);
     } catch (error) {
@@ -29,8 +24,10 @@ export class ExpensesController {
 
   async getMyExpenses(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const status = req.query.status as string | undefined;
-      const expenses = await expensesService.getMyExpenses(req.user!.userId, status);
+      const { status, search, dateFrom, dateTo } = req.query as Record<string, string>;
+      const expenses = await expensesService.getMyExpenses(req.user!.userId, {
+        status, search, dateFrom, dateTo,
+      });
       successResponse(res, expenses);
     } catch (error) {
       next(error);
@@ -39,12 +36,11 @@ export class ExpensesController {
 
   async getAllExpenses(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const { status, category, page, limit } = req.query;
+      const { status, category, search, dateFrom, dateTo, page, limit } = req.query as Record<string, string>;
       const result = await expensesService.getAllExpenses(req.user!.companyId, {
-        status: status as string,
-        category: category as string,
-        page: page ? parseInt(page as string) : undefined,
-        limit: limit ? parseInt(limit as string) : undefined,
+        status, category, search, dateFrom, dateTo,
+        page: page ? parseInt(page) : undefined,
+        limit: limit ? parseInt(limit) : undefined,
       });
       successResponse(res, result);
     } catch (error) {
@@ -54,9 +50,22 @@ export class ExpensesController {
 
   async getExpenseById(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const expenseId = req.params.id as string;
-      const expense = await expensesService.getExpenseById(expenseId, req.user!.companyId);
+      const expense = await expensesService.getExpenseById(req.params.id, req.user!.companyId);
       successResponse(res, expense);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async exportCsv(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { status, dateFrom, dateTo } = req.query as Record<string, string>;
+      const csv = await expensesService.exportCsv(req.user!.companyId, {
+        status, dateFrom, dateTo,
+      });
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename=expenses-${new Date().toISOString().split('T')[0]}.csv`);
+      res.send(csv);
     } catch (error) {
       next(error);
     }

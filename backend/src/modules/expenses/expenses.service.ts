@@ -12,15 +12,11 @@ export class ExpensesService {
     expenseDate: string;
     receiptUrl?: string;
   }) {
-    // Get company default currency
     const company = await prisma.company.findUnique({ where: { id: companyId } });
     if (!company) throw new AppError('Company not found.', 404);
 
-    // Convert to base currency
     const amountInBase = await currencyService.convert(
-      body.amount,
-      body.currency,
-      company.currency
+      body.amount, body.currency, company.currency
     );
 
     const expense = await prisma.expense.create({
@@ -41,15 +37,10 @@ export class ExpensesService {
       },
     });
 
-    // Initialize approval flow
     const approvalResult = await approvalEngine.initializeApproval(
-      expense.id,
-      companyId,
-      Number(amountInBase),
-      userId
+      expense.id, companyId, Number(amountInBase), userId
     );
 
-    // Refetch expense with updated status and approval requests
     const updatedExpense = await prisma.expense.findUnique({
       where: { id: expense.id },
       include: {
@@ -64,12 +55,28 @@ export class ExpensesService {
     return { ...updatedExpense, approvalResult };
   }
 
-  async getMyExpenses(userId: string, status?: string) {
+  async getMyExpenses(userId: string, filters: {
+    status?: string;
+    search?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }) {
+    const where: any = { submittedBy: userId };
+    if (filters.status) where.status = filters.status;
+    if (filters.search) {
+      where.OR = [
+        { description: { contains: filters.search, mode: 'insensitive' } },
+        { category: { contains: filters.search, mode: 'insensitive' } },
+      ];
+    }
+    if (filters.dateFrom || filters.dateTo) {
+      where.expenseDate = {};
+      if (filters.dateFrom) where.expenseDate.gte = new Date(filters.dateFrom);
+      if (filters.dateTo) where.expenseDate.lte = new Date(filters.dateTo);
+    }
+
     return prisma.expense.findMany({
-      where: {
-        submittedBy: userId,
-        ...(status && { status: status as any }),
-      },
+      where,
       include: {
         approvalRequests: {
           include: { approver: { select: { id: true, name: true } } },
@@ -83,6 +90,9 @@ export class ExpensesService {
   async getAllExpenses(companyId: string, filters: {
     status?: string;
     category?: string;
+    search?: string;
+    dateFrom?: string;
+    dateTo?: string;
     page?: number;
     limit?: number;
   }) {
@@ -93,6 +103,17 @@ export class ExpensesService {
     const where: any = { companyId };
     if (filters.status) where.status = filters.status;
     if (filters.category) where.category = filters.category;
+    if (filters.search) {
+      where.OR = [
+        { description: { contains: filters.search, mode: 'insensitive' } },
+        { category: { contains: filters.search, mode: 'insensitive' } },
+      ];
+    }
+    if (filters.dateFrom || filters.dateTo) {
+      where.expenseDate = {};
+      if (filters.dateFrom) where.expenseDate.gte = new Date(filters.dateFrom);
+      if (filters.dateTo) where.expenseDate.lte = new Date(filters.dateTo);
+    }
 
     const [expenses, total] = await Promise.all([
       prisma.expense.findMany({
@@ -132,6 +153,38 @@ export class ExpensesService {
 
     if (!expense) throw new AppError('Expense not found.', 404);
     return expense;
+  }
+
+  async exportCsv(companyId: string, filters: {
+    status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+  }) {
+    const where: any = { companyId };
+    if (filters.status) where.status = filters.status;
+    if (filters.dateFrom || filters.dateTo) {
+      where.expenseDate = {};
+      if (filters.dateFrom) where.expenseDate.gte = new Date(filters.dateFrom);
+      if (filters.dateTo) where.expenseDate.lte = new Date(filters.dateTo);
+    }
+
+    const expenses = await prisma.expense.findMany({
+      where,
+      include: {
+        submitter: { select: { name: true, email: true } },
+      },
+      orderBy: { expenseDate: 'desc' },
+    });
+
+    // Build CSV
+    const header = 'Date,Submitted By,Email,Category,Description,Amount,Currency,Amount (Base),Status\n';
+    const rows = expenses.map(e => {
+      const date = e.expenseDate.toISOString().split('T')[0];
+      const desc = `"${(e.description || '').replace(/"/g, '""')}"`;
+      return `${date},${e.submitter.name},${e.submitter.email},${e.category},${desc},${e.amount},${e.currency},${e.amountInBase},${e.status}`;
+    }).join('\n');
+
+    return header + rows;
   }
 }
 

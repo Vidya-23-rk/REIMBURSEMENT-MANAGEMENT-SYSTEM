@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import helmet from 'helmet';
+import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { errorHandler } from './middleware/errorHandler';
 import authRouter from './modules/auth/auth.router';
@@ -12,26 +13,31 @@ import rulesRouter from './modules/rules/rules.router';
 import ocrRouter from './modules/ocr/ocr.router';
 import currencyRouter from './modules/currency/currency.router';
 import dashboardRouter from './modules/dashboard/dashboard.router';
+import companyRouter from './modules/company/company.router';
 
 const app = express();
 
 // ─── Security Middleware ────────────────────────────────
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
+// ─── Request Logging ────────────────────────────────────
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms'));
+
 // ─── Rate Limiting ──────────────────────────────────────
+const isDev = process.env.NODE_ENV !== 'production';
+
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,  // 15 minutes
-  max: 200,                   // 200 requests per window
+  windowMs: 15 * 60 * 1000,
+  max: isDev ? 500 : 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: 'Too many requests. Try again later.' },
 });
 app.use(globalLimiter);
 
-// Stricter limiter for auth routes (prevent brute force)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,                    // 20 login attempts per 15 min
+  max: isDev ? 100 : 20,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: 'Too many login attempts. Try again later.' },
@@ -74,6 +80,7 @@ app.use('/api/rules', rulesRouter);
 app.use('/api/ocr', ocrRouter);
 app.use('/api/currency', currencyRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/company', companyRouter);
 
 // ─── 404 Handler ────────────────────────────────────────
 app.use((_req, res) => {
