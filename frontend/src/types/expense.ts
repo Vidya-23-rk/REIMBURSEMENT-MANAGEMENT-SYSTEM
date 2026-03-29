@@ -29,6 +29,7 @@ export interface CreateExpensePayload {
   category: string;
   description: string;
   expenseDate: string;
+  receipt?: File;
 }
 
 export interface ExpenseFilters {

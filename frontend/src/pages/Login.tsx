@@ -45,12 +45,12 @@ export default function Login() {
 
   // Quick-fill for demo purposes
   const quickFill = (role: 'admin' | 'manager' | 'employee') => {
-    const emails: Record<string, string> = {
-      admin: 'alice@acme.com',
-      manager: 'bob@acme.com',
-      employee: 'charlie@acme.com',
+    const creds: Record<string, { email: string; password: string }> = {
+      admin:    { email: 'admin@techcorp.com',  password: 'admin123' },
+      manager:  { email: 'priya@techcorp.com',  password: 'manager123' },
+      employee: { email: 'amit@techcorp.com',   password: 'employee123' },
     };
-    setForm({ email: emails[role], password: 'password123' });
+    setForm(creds[role]);
     setErrors({});
   };
 

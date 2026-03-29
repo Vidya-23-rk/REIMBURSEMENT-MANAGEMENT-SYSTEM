@@ -24,8 +24,8 @@ export const expensesApi = {
       if (filters?.category) result = result.filter((e) => e.category === filters.category);
       return result;
     }
-    const { data } = await api.get<{ success: true; data: Expense[] }>('/expenses', { params: filters });
-    return data.data;
+    const { data } = await api.get<{ success: true; data: { expenses: Expense[]; total: number; page: number; pages: number } }>('/expenses', { params: filters });
+    return data.data.expenses;
   },
 
   getExpenseById: async (id: string): Promise<Expense> => {
@@ -61,7 +61,24 @@ export const expensesApi = {
       mockExpenses.unshift(newExpense);
       return newExpense;
     }
-    const { data } = await api.post<{ success: true; data: Expense }>('/expenses', payload);
+
+    // If receipt file attached, use FormData (multipart); otherwise JSON
+    if (payload.receipt) {
+      const formData = new FormData();
+      formData.append('receipt', payload.receipt);
+      formData.append('amount', String(payload.amount));
+      formData.append('currency', payload.currency);
+      formData.append('category', payload.category);
+      formData.append('description', payload.description);
+      formData.append('expenseDate', payload.expenseDate);
+      const { data } = await api.post<{ success: true; data: Expense }>('/expenses', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return data.data;
+    }
+
+    const { receipt, ...jsonPayload } = payload;
+    const { data } = await api.post<{ success: true; data: Expense }>('/expenses', jsonPayload);
     return data.data;
   },
 

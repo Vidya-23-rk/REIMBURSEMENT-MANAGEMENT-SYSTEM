@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Bell,
   Search,
+  KeyRound,
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import toast from 'react-hot-toast';
@@ -68,6 +69,12 @@ const navItems: NavItem[] = [
     label: 'Approval Rules',
     to: '/rules',
     roles: ['admin'],
+  },
+  {
+    icon: <KeyRound className="w-5 h-5" />,
+    label: 'Change Password',
+    to: '/settings/password',
+    roles: ['admin', 'manager', 'employee'],
   },
 ];
 

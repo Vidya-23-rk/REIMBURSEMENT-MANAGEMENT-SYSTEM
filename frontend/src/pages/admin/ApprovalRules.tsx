@@ -5,15 +5,11 @@ import {
   Edit2,
   X,
   Settings,
-  ArrowDown,
   ArrowRight,
-  GripVertical,
-  Users,
-  Hash,
 } from 'lucide-react';
 import { rulesApi } from '../../api/rules.api';
 import { usersApi } from '../../api/users.api';
-import type { ApprovalRule, ApprovalStep, CreateRulePayload, User } from '../../types';
+import type { ApprovalRule, CreateRulePayload, User } from '../../types';
 import toast from 'react-hot-toast';
 
 export default function ApprovalRules() {
@@ -169,9 +165,9 @@ export default function ApprovalRules() {
                   <h3 className="text-base font-display font-bold text-surface-900">{rule.name}</h3>
                   <p className="text-sm text-surface-400 mt-1">
                     {rule.ruleType.charAt(0).toUpperCase() + rule.ruleType.slice(1)} rule
-                    {rule.minAmount !== undefined && ` · Min: ₹${rule.minAmount.toLocaleString()}`}
-                    {rule.maxAmount !== undefined && ` · Max: ₹${rule.maxAmount.toLocaleString()}`}
-                    {rule.percentageThreshold !== undefined && ` · ${rule.percentageThreshold}% threshold`}
+                    {rule.minAmount != null && ` · Min: ₹${rule.minAmount.toLocaleString()}`}
+                    {rule.maxAmount != null && ` · Max: ₹${rule.maxAmount.toLocaleString()}`}
+                    {rule.percentageThreshold != null && ` · ${rule.percentageThreshold}% threshold`}
                   </p>
                 </div>
                 <div className="flex gap-1">

@@ -9,6 +9,8 @@ import {
   Tag,
   User as UserIcon,
   MessageSquare,
+  Paperclip,
+  X,
 } from 'lucide-react';
 import { expensesApi } from '../../api/expenses.api';
 import { useCurrency } from '../../hooks/useCurrency';
@@ -34,19 +36,28 @@ export default function SubmitExpense() {
     remarks: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
 
   const convertedAmount = form.currency !== 'INR' ? convert(form.amount, form.currency, 'INR') : form.amount;
 
   const handleOCRResult = (result: OCRResult) => {
-    setForm({
-      ...form,
-      description: result.description || `${result.vendor} - receipt`,
-      expenseDate: result.date || form.expenseDate,
-      category: result.category || form.category,
-      amount: result.amount,
-      currency: result.currency || form.currency,
-    });
+    const updates: Partial<typeof form> = {};
+    const extracted: string[] = [];
+
+    if (result.description) { updates.description = result.description; extracted.push('description'); }
+    if (result.date) { updates.expenseDate = result.date; extracted.push('date'); }
+    if (result.category) { updates.category = result.category; extracted.push('category'); }
+    if (result.amount && result.amount > 0) { updates.amount = result.amount; extracted.push(`amount (${result.amount})`); }
+    if (result.currency) { updates.currency = result.currency; extracted.push('currency'); }
+
+    setForm({ ...form, ...updates });
     setActiveTab('new');
+
+    if (extracted.length > 0) {
+      toast.success(`Extracted: ${extracted.join(', ')}`, { duration: 4000 });
+    } else {
+      toast('OCR could not extract fields — please enter manually', { icon: '⚠️' });
+    }
   };
 
   const validate = () => {
@@ -71,6 +82,7 @@ export default function SubmitExpense() {
         category: form.category,
         amount: form.amount,
         currency: form.currency,
+        ...(receiptFile ? { receipt: receiptFile } : {}),
       });
       toast.success('Expense submitted successfully!');
       navigate('/expenses');
@@ -242,6 +254,34 @@ export default function SubmitExpense() {
                 onChange={(e) => updateField('remarks', e.target.value)}
                 rows={3}
               />
+            </div>
+
+            {/* Receipt Upload */}
+            <div>
+              <label className="input-label flex items-center gap-2">
+                <Paperclip className="w-4 h-4 text-surface-400" /> Attach Receipt (optional)
+              </label>
+              {receiptFile ? (
+                <div className="flex items-center gap-3 mt-2 p-3 bg-surface-50 rounded-xl">
+                  <Paperclip className="w-4 h-4 text-primary-500" />
+                  <span className="text-sm text-surface-700 flex-1 truncate">{receiptFile.name}</span>
+                  <span className="text-xs text-surface-400">{(receiptFile.size / 1024).toFixed(0)} KB</span>
+                  <button
+                    type="button"
+                    onClick={() => setReceiptFile(null)}
+                    className="p-1 rounded-lg hover:bg-surface-200 text-surface-400"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={(e) => setReceiptFile(e.target.files?.[0] || null)}
+                  className="input-field text-sm file:mr-3 file:py-1.5 file:px-4 file:rounded-lg file:border-0 file:bg-primary-50 file:text-primary-600 file:font-semibold file:text-sm hover:file:bg-primary-100 file:cursor-pointer"
+                />
+              )}
             </div>
           </div>
 

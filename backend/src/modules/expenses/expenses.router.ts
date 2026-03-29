@@ -8,8 +8,18 @@ const router = Router();
 
 router.use(authenticate);
 
-// Submit expense with optional receipt upload
-router.post('/', diskUpload.single('receipt'), (req, res, next) => expensesController.createExpense(req as any, res, next));
+// Submit expense — accepts both JSON and multipart/form-data (with receipt file)
+router.post('/', (req, res, next) => {
+  // If it's a multipart request, process the file upload first
+  if (req.headers['content-type']?.includes('multipart/form-data')) {
+    diskUpload.single('receipt')(req, res, (err: any) => {
+      if (err) return next(err);
+      expensesController.createExpense(req as any, res, next);
+    });
+  } else {
+    expensesController.createExpense(req as any, res, next);
+  }
+});
 
 // My expenses — supports ?status=&search=&dateFrom=&dateTo=
 router.get('/mine', (req, res, next) => expensesController.getMyExpenses(req as any, res, next));

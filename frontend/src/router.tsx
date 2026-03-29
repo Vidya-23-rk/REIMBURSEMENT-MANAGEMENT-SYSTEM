@@ -10,6 +10,7 @@ import MyExpenses from './pages/employee/MyExpenses';
 import PendingApprovals from './pages/manager/PendingApprovals';
 import AdminUsers from './pages/admin/Users';
 import ApprovalRules from './pages/admin/ApprovalRules';
+import ChangePassword from './pages/ChangePassword';
 import NotFound from './pages/NotFound';
 
 const router = createBrowserRouter([
@@ -78,6 +79,10 @@ const router = createBrowserRouter([
             <ApprovalRules />
           </RoleGuard>
         ),
+      },
+      {
+        path: 'settings/password',
+        element: <ChangePassword />,
       },
     ],
   },

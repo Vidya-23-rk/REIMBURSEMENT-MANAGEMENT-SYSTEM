@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import useAuthStore from '../../store/authStore';
+import api from '../../api/axios';
 import {
   Users,
   Receipt,
@@ -7,59 +9,99 @@ import {
   Settings,
   ArrowUpRight,
   Activity,
+  Loader2,
 } from 'lucide-react';
+
+interface AdminStats {
+  overview: {
+    totalExpenses: number;
+    pendingExpenses: number;
+    approvedExpenses: number;
+    rejectedExpenses: number;
+    inProgressExpenses: number;
+    totalUsers: number;
+    pendingApprovals: number;
+    totalApprovedAmount: number;
+    totalPendingAmount: number;
+  };
+  recentExpenses: Array<{
+    id: string;
+    description: string;
+    amount: number;
+    currency: string;
+    status: string;
+    createdAt: string;
+    submitter: { id: string; name: string };
+  }>;
+  categoryBreakdown: Array<{
+    category: string;
+    count: number;
+    totalAmount: number;
+  }>;
+}
 
 export default function AdminDashboard() {
   const user = useAuthStore((s) => s.user);
+  const [data, setData] = useState<AdminStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/dashboard').then((res) => {
+      setData(res.data.data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="page-container flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+      </div>
+    );
+  }
+
+  const o = data?.overview;
 
   const stats = [
     {
       label: 'Total Expenses',
-      value: '156',
-      change: '+24 this month',
+      value: String(o?.totalExpenses ?? 0),
+      change: `${o?.pendingExpenses ?? 0} pending`,
       icon: <Receipt className="w-5 h-5" />,
       bgLight: 'bg-primary-50',
       textColor: 'text-primary-600',
     },
     {
       label: 'Total Users',
-      value: '32',
-      change: '4 departments',
+      value: String(o?.totalUsers ?? 0),
+      change: `${o?.pendingApprovals ?? 0} pending approvals`,
       icon: <Users className="w-5 h-5" />,
       bgLight: 'bg-accent-50',
       textColor: 'text-accent-600',
     },
     {
       label: 'Total Reimbursed',
-      value: '₹18.5L',
-      change: '+₹3.2L this month',
+      value: `₹${((o?.totalApprovedAmount ?? 0) / 100000).toFixed(1)}L`,
+      change: `₹${((o?.totalPendingAmount ?? 0) / 100000).toFixed(1)}L pending`,
       icon: <TrendingUp className="w-5 h-5" />,
       bgLight: 'bg-success-50',
       textColor: 'text-success-600',
     },
     {
-      label: 'Active Rules',
-      value: '6',
-      change: '2 categories',
+      label: 'Categories',
+      value: String(data?.categoryBreakdown?.length ?? 0),
+      change: `${o?.approvedExpenses ?? 0} approved`,
       icon: <Settings className="w-5 h-5" />,
       bgLight: 'bg-warning-50',
       textColor: 'text-warning-600',
     },
   ];
 
-  const recentActivity = [
-    { id: 1, action: 'Expense approved', user: 'Bob Smith', target: 'Flight to Mumbai (₹20,875)', time: '10 min ago', type: 'success' },
-    { id: 2, action: 'New expense submitted', user: 'Diana Patel', target: 'React workshop (₹26,720)', time: '2 hours ago', type: 'info' },
-    { id: 3, action: 'Expense rejected', user: 'Bob Smith', target: 'Figma subscription (₹7,650)', time: '4 hours ago', type: 'danger' },
-    { id: 4, action: 'New user added', user: 'Admin', target: 'Emily Chen (employee)', time: '1 day ago', type: 'info' },
-    { id: 5, action: 'Rule updated', user: 'Admin', target: 'High Value Expense threshold', time: '2 days ago', type: 'warning' },
-  ];
-
-  const getActivityDot = (type: string) => {
-    switch (type) {
-      case 'success': return 'bg-success-500';
-      case 'danger': return 'bg-danger-500';
-      case 'warning': return 'bg-warning-500';
+  const getStatusDot = (status: string) => {
+    switch (status) {
+      case 'approved': return 'bg-success-500';
+      case 'rejected': return 'bg-danger-500';
+      case 'in_progress': return 'bg-warning-500';
       default: return 'bg-primary-500';
     }
   };
@@ -73,7 +115,7 @@ export default function AdminDashboard() {
             Admin Dashboard
           </h1>
           <p className="page-subtitle">
-            Organization overview and system administration
+            Welcome back, {user?.name}
           </p>
         </div>
       </div>
@@ -99,7 +141,7 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Activity Feed */}
+      {/* Recent Expenses */}
       <div className="card overflow-hidden">
         <div className="px-6 py-4 border-b border-surface-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -107,30 +149,39 @@ export default function AdminDashboard() {
               <Activity className="w-4 h-4 text-primary-500" />
             </div>
             <div>
-              <h2 className="text-lg font-display font-bold text-surface-900">Recent Activity</h2>
-              <p className="text-sm text-surface-400">Organization-wide activity log</p>
+              <h2 className="text-lg font-display font-bold text-surface-900">Recent Expenses</h2>
+              <p className="text-sm text-surface-400">Latest submissions across the company</p>
             </div>
           </div>
         </div>
         <div className="divide-y divide-surface-50">
-          {recentActivity.map((item, i) => (
+          {(data?.recentExpenses ?? []).map((item, i) => (
             <div
               key={item.id}
               className="px-6 py-4 flex items-start gap-4 hover:bg-surface-50/50 transition-colors animate-slide-up"
               style={{ animationDelay: `${(i + 4) * 60}ms` }}
             >
               <div className="mt-1.5">
-                <div className={`w-2.5 h-2.5 rounded-full ${getActivityDot(item.type)}`} />
+                <div className={`w-2.5 h-2.5 rounded-full ${getStatusDot(item.status)}`} />
               </div>
               <div className="flex-1">
                 <p className="text-sm text-surface-800">
-                  <span className="font-semibold">{item.action}</span> by {item.user}
+                  <span className="font-semibold">{item.description}</span> by {item.submitter.name}
                 </p>
-                <p className="text-xs text-surface-400 mt-0.5">{item.target}</p>
+                <p className="text-xs text-surface-400 mt-0.5">
+                  {item.currency} {item.amount.toLocaleString()} · {item.status}
+                </p>
               </div>
-              <span className="text-xs text-surface-400 whitespace-nowrap">{item.time}</span>
+              <span className="text-xs text-surface-400 whitespace-nowrap">
+                {new Date(item.createdAt).toLocaleDateString()}
+              </span>
             </div>
           ))}
+          {(data?.recentExpenses ?? []).length === 0 && (
+            <div className="px-6 py-8 text-center text-surface-400 text-sm">
+              No expenses yet
+            </div>
+          )}
         </div>
       </div>
     </div>

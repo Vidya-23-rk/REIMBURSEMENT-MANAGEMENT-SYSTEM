@@ -1,24 +1,44 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Receipt,
-  Filter,
   Eye,
   Calendar,
   Tag,
-  UserIcon,
   X,
   FileText,
+  Download,
 } from 'lucide-react';
 import { useExpenses } from '../../hooks/useExpenses';
+import useAuthStore from '../../store/authStore';
+import api from '../../api/axios';
 import StatusBadge from '../../components/StatusBadge';
 import ApprovalTimeline from '../../components/ApprovalTimeline';
 import type { Expense, ExpenseStatus } from '../../types';
+import toast from 'react-hot-toast';
 
 export default function MyExpenses() {
+  const user = useAuthStore((s) => s.user);
+  const isAdminOrManager = user?.role === 'admin' || user?.role === 'manager';
   const [statusFilter, setStatusFilter] = useState<ExpenseStatus | undefined>();
-  const { expenses, isLoading } = useExpenses({ status: statusFilter }, true);
+  const { expenses, isLoading } = useExpenses({ status: statusFilter }, !isAdminOrManager);
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+
+  const handleExportCsv = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter) params.set('status', statusFilter);
+      const res = await api.get(`/expenses/export?${params.toString()}`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `expenses-${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+      toast.success('CSV downloaded!');
+    } catch {
+      toast.error('Failed to export CSV');
+    }
+  };
 
   const filters: { label: string; value: ExpenseStatus | undefined }[] = [
     { label: 'All', value: undefined },
@@ -33,9 +53,16 @@ export default function MyExpenses() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="page-title">My Expenses</h1>
-          <p className="page-subtitle">Track your submitted expense reimbursements</p>
+          <h1 className="page-title">{isAdminOrManager ? 'All Expenses' : 'My Expenses'}</h1>
+          <p className="page-subtitle">
+            {isAdminOrManager ? 'View all expense submissions across the company' : 'Track your submitted expense reimbursements'}
+          </p>
         </div>
+        {isAdminOrManager && (
+          <button onClick={handleExportCsv} className="btn-ghost flex items-center gap-2" id="export-csv-btn">
+            <Download className="w-4 h-4" /> Export CSV
+          </button>
+        )}
       </div>
 
       {/* Filters — matching wireframe's status tabs */}

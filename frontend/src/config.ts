@@ -7,4 +7,4 @@
  * While USE_MOCK is true, all API modules return local mock data.
  * When false, Axios calls go through the Vite proxy to the real backend.
  */
-export const USE_MOCK = true;
+export const USE_MOCK = false;
