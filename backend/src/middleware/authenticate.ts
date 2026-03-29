@@ -2,6 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/jwt';
 import { errorResponse } from '../utils/response';
 
+// Import multer so its Express.Request augmentation (adding `file` & `files`) is applied
+import 'multer';
+
 export interface AuthRequest extends Request {
   user?: {
     userId: string;

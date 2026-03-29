@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import 'multer';
 import { ocrService } from './ocr.service';
 import { successResponse, errorResponse } from '../../utils/response';
 
