@@ -4,15 +4,13 @@ import {
   Trash2,
   Edit2,
   X,
-  Loader2,
   Users as UsersIcon,
   Mail,
   Shield,
   UserCog,
-  Send,
 } from 'lucide-react';
 import { usersApi } from '../../api/users.api';
-import type { User, CreateUserPayload, UserRole } from '../../types';
+import type { User, UserRole } from '../../types';
 import toast from 'react-hot-toast';
 
 export default function AdminUsers() {

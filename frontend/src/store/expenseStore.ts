@@ -28,7 +28,7 @@ const defaultFilter = {
   limit: 10,
 };
 
-const useExpenseStore = create<ExpenseState>((set, get) => ({
+const useExpenseStore = create<ExpenseState>((set) => ({
   expenses: [],
   selectedExpense: null,
   isLoading: false,

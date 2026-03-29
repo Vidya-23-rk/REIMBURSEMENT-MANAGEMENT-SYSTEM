@@ -2,12 +2,8 @@ import { useState, useEffect } from 'react';
 import {
   CheckCircle2,
   XCircle,
-  Clock,
-  MessageSquare,
   Loader2,
   AlertCircle,
-  User,
-  DollarSign,
 } from 'lucide-react';
 import { approvalsApi } from '../../api/approvals.api';
 import { expensesApi } from '../../api/expenses.api';
@@ -39,7 +35,7 @@ export default function PendingApprovals() {
     }
   };
 
-  const handleApprove = async (approvalId: string, expenseId: string) => {
+  const handleApprove = async (approvalId: string, _expenseId: string) => {
     setActionLoading(approvalId);
     try {
       await approvalsApi.approve(approvalId, { comment: 'Approved' });
