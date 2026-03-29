@@ -115,13 +115,12 @@ model ApprovalRule {
 model ApprovalStep {
   id             String  @id @default(uuid())
   ruleId         String
-  approverId     String?
-  approverType   String  @default("specific") // "specific" | "manager"
+  approverId     String
   stepOrder      Int
   isKeyApprover  Boolean @default(false)
 
   rule      ApprovalRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
-  approver  User?        @relation(fields: [approverId], references: [id], onDelete: Cascade)
+  approver  User         @relation(fields: [approverId], references: [id], onDelete: Cascade)
 
   @@index([ruleId])
 }

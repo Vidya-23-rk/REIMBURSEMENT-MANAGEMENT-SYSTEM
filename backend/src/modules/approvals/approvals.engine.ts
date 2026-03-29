@@ -75,24 +75,12 @@ export class ApprovalEngine {
 
     // Create approval requests for each step
     for (const step of rule.approvalSteps) {
-      let resolvedApproverId = step.approverId;
-
-      if ((step as any).approverType === 'manager') {
-        if (submitter?.managerId) {
-          resolvedApproverId = submitter.managerId;
-        } else {
-          continue; // Cannot process manager step if user has no manager
-        }
-      }
-
-      if (!resolvedApproverId) continue;
-
       // Skip if approver is the submitter
-      if (resolvedApproverId === submitterId) continue;
+      if (step.approverId === submitterId) continue;
 
       approvalRequests.push({
         expenseId,
-        approverId: resolvedApproverId,
+        approverId: step.approverId,
         ruleId: rule.id,
         stepOrder: step.stepOrder,
         status: 'pending',
